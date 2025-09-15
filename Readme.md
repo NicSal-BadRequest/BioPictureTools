@@ -9,11 +9,9 @@ BioPictureTools es un conjunto de herramientas escritas en Python para procesar 
 
 ## Características
 
-Interfaz de línea de comando / scripts fáciles de usar
-
-Utiliza bioio y bioio_bioformats para leer formatos comunes de bioimagen
-
-Modular: varios scripts para distintos tipos de análisis
+    -Interfaz de línea de comando / scripts fáciles de usar
+    -Utiliza bioio y bioio_bioformats para leer formatos comunes de bioimagen
+    -Modular: varios scripts para distintos tipos de análisis
 
 ## Requisitos
 
@@ -68,6 +66,21 @@ BioPictureTools/
 ├── README.md
 └── (otros scripts .py / notebooks / recursos)
 ```
+
+## Ejemplo de uso
+
+```bash
+# Ejecutar script principal (supuesto nombre, reemplazá según tu estructura)
+python main.py --input ruta/a/las/imagenes --output carpeta_de_salida
+
+# Otro ejemplo para detección de núcleos
+python RastreadorNucleos.py --input example.png --threshold 0.2
+```
+
+
+Aquí un ejemplo del resultado generado por BioPictureTools:
+
+![Ejemplo de salida](output/output_example.png)
 
 ## Licencia
 
