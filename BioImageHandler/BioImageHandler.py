@@ -1,7 +1,14 @@
 from bioio import BioImage 
 import bioio_bioformats
 import numpy as np  
+import cv2
 
+class BioImagenDim(Enum):
+    _2D = 2
+    _3D = 3
+    _4D = 4
+    _5D = 5
+        
 class BioImageHandler():
     '''
         Clase para la manipulación y procesamiento de imagenes biológicas de microscopía, en particular, confocal de fluorescencia.
@@ -14,6 +21,16 @@ class BioImageHandler():
         self.img = None # Array uni o multidimensional.
         self.imgArrays = None 
         self.imgMatrizActual = None
+    
+    def leerBioImage_CV2(self):
+        # Función para imagenes 2D tipo .png, .jpg y algunos .tiff
+        try:
+            img = cv2.imread(self.rutaImagen, cv2.IMREAD_GRAYSCALE)
+            self.img = img
+            return img
+        except Exception as e:
+            print(f"Error al leer la imagen: {e}")
+            return None   
     
     def leerBioImagen_bioformats(self):
         # Funcion que transforma una iamgen cargada por su ruta en su Array multidimensional según si es una pila de imagenes o no. 
@@ -112,7 +129,7 @@ class BioImageHandler():
         if img is None:
             img = self.img
         
-        imgArrays = img.data.squeeze() 
+        imgArrays = img.squeeze() 
         self.imagenesCanales = imgArrays 
         
         return imgArrays, imgArrays.shape 
@@ -121,6 +138,8 @@ class BioImageHandler():
         # Convierte un array de una imagen de tipo uintx a una matriz del mismo tipo
         
         matriz_imagen = np.array(imgArray)
+        if matriz_imagen[0, :].all() == 255:
+            matriz_imagen = matriz_imagen[1:, :]
         self.imgMatrizActual = matriz_imagen
         
         return matriz_imagen
@@ -132,9 +151,8 @@ class BioImageHandler():
         if imgMatriz is None:
             imgMatriz = self.imgMatrizActual
         
-        dtype = imgMatriz.dtype
-        max_valor = np.iinfo(data_type).max
-        matriz_img_norm = imgMatriz / max_valor # Esto lo normaliza pero lo deja en flotante
+        matriz_img_norm = imgMatriz.astype(np.uint8)
+        matriz_img_norm = imgMatriz / 255
         self.imgMatrizActual = matriz_img_norm
         
         return matriz_img_norm

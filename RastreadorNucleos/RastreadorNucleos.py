@@ -1,4 +1,5 @@
 import BioImageHandler.BioImageHandler
+import BioImageHandler.BioImagenDim
 import cv2 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,31 +19,41 @@ class RastreadorNucleos(BioImageHandler):
         self.canalActual = canalActual
         self.imgActual = None
         self.imgProcesada = None
-        self.num_nucleos = None
+        self.num_nucleos = None # Nota: Se debe restar 1 a este valor, puesto que cuenta al fondo como rotulo 0. 
         self.imgRotulada = None
         self.centroides = None 
         self.coordenadasNucleos = None
         
-    def procesarImagen(self, canal = 0, threshold = 0.5):
+    def procesarImagen(self, tipo = BioImagenDim._2D, canal = 0, threshold = 0.5):
         '''
             Recibe un indice a un array de un array multidimensional de imagen. Por Default es 0.
             Si la imagen es un unico array,se devuelve la misma.
             Devuelve la imagen como tipo de bioio y la misma procesada a matriz binaria.
         '''
         
-        img = leerBioImagen_bioformats()
-        self.imgActual = img   
+        if tipo == BioImagenDim._2D:
+            img = super().leerBioImage_CV2()
+        else:
+            img = super().leerBioImagen_bioformats()   
         
-        forma_imagen = procesar_shape(img)
+        if img is None:
+            print("No image loaded")
+            return None, None
+    
+        # Process the image shape
+        forma_imagen = super().procesar_shape(img)
         
-        if forma_imagen['canales'] > 1 : # Si no es una imagen 2D o 3D de un unico canal. 
-            self.imgArrays = obtenerImagenesArray(img)
-            img = self.imgArrays[canal]
-            self.imgActual = img
-            
-        imgProcesada = convertirImgArray_AMAtriz(img)
-        imgProcesada = normalizarImgMatriz(imgProcesada)
-        imgProcesada = binarizarImgMatrizNorm(imgProcesada, threshold)
+        # Check if the image has multiple channels, and extract the channel if needed
+        if forma_imagen['canales'] > 1:  # If not a 2D or 3D single-channel image
+            imgArrays, _ = super().obtenerImagenesArray(img)
+            img = imgArrays[canal]
+        
+        self.imgActual = img
+        
+        # Process the image: convert to matrix, normalize, binarize
+        imgProcesada = super().convertirImgArray_AMAtriz(img)
+        imgProcesada = super().normalizarImgMatriz(imgProcesada)
+        imgProcesada = super().binarizarImgMatrizNorm(imgProcesada, threshold)
         self.imgProcesada = imgProcesada
         
         return img, imgProcesada
@@ -68,7 +79,7 @@ class RastreadorNucleos(BioImageHandler):
         
         # 3 - Detectar nucleos
         num_nucleos_filtrados, nucleos_filtrados = cv2.connectedComponents(mascara_filtrada, connectivity=8)
-        self.num_nucleos = num_nucleos_filtrados - 1 # Se elimina el fondo
+        self.num_nucleos = num_nucleos_filtrados
         self.imgRotulada = nucleos_filtrados
         
         return num_nucleos_filtrados, nucleos_filtrados
@@ -81,7 +92,7 @@ class RastreadorNucleos(BioImageHandler):
             nucleos_filtrados = self.imgRotulada
         
         centroides = {}
-        for nucleo in range(num_nucleos):
+        for nucleo in range(1, num_nucleos):
             coordenadas = np.column_stack(np.where(nucleos_filtrados == nucleo))
             centroide = coordenadas.mean(axis=0)
             centroides[f"nucleo_{nucleo}"] = (int(centroide[0]), int(centroide[1]))
@@ -90,7 +101,7 @@ class RastreadorNucleos(BioImageHandler):
         
         return centroides
     
-    def coordenadasNucleos(self, num_nucleos = None, nucleos_filtrados = None):
+    def coordenadasDeNucleos(self, num_nucleos = None, nucleos_filtrados = None):
         
         if num_nucleos is None:
             num_nucleos = self.num_nucleos
@@ -98,8 +109,8 @@ class RastreadorNucleos(BioImageHandler):
             nucleos_filtrados = self.imgRotulada
         
         coordenadasNucleos = {}
-        for nucleo in range(num_nucleos):
-            coordeandas = np.column_stack(np.where(nucleos_filtrados == nucleo))
+        for nucleo in range(1, num_nucleos):
+            coordenadas = np.column_stack(np.where(nucleos_filtrados == nucleo))
             coordenadasNucleos[f"nucleo_{nucleo}"] = coordenadas.tolist()
         
         self.coordenadasNucleos = coordenadasNucleos
@@ -108,6 +119,7 @@ class RastreadorNucleos(BioImageHandler):
     
     def graficarNucleosRastreados(self, imgOriginal = None, coordenadasNucleos = None, coordenadasCentroides = None, titulo = None,
                                   centroideON = True, rectanguloON = True, rotulosON = True, colorRotulo = 'blue'):
+        
         fig, axes = plt.subplots(1, 2, figsize=(12, 6))
 
         if imgOriginal is None:
@@ -120,17 +132,19 @@ class RastreadorNucleos(BioImageHandler):
             titulo = "Imagen original"
 
         # Subplot izquierdo: imagen original
-
         axes[0].imshow(imgOriginal, cmap='gray')
         axes[0].set_title(titulo)
         axes[0].axis('off')
 
-
         # Subplot derecho: con rectángulos y centroides
-
         axes[1].imshow(imgOriginal, cmap='gray')
 
-        for nucleo in range(num_nucleos):
+        # Access num_nucleos and nucleos_filtrados
+        num_nucleos = self.num_nucleos
+        nucleos_filtrados = self.imgRotulada
+
+        for nucleo in range(1, num_nucleos):
+            # Get coordinates of the nucleus
             coordenadas = np.column_stack(np.where(nucleos_filtrados == nucleo))
             min_fila, min_columna = coordenadas.min(axis=0)
             max_fila, max_columna = coordenadas.max(axis=0)
@@ -139,15 +153,15 @@ class RastreadorNucleos(BioImageHandler):
             rectangulo = plt.Rectangle((min_columna - 1, min_fila - 1),
                                     max_columna - min_columna + 2, max_fila - min_fila + 2,
                                     edgecolor='red', facecolor='none', linewidth=1)
+            
             if rectanguloON:
                 axes[1].add_patch(rectangulo)
 
-
             # Dibujar centroide (más pequeño con markersize=4)
-            centroide_fila, centroide_columna = centroides[f"obj_{nucleo}"]
-            if centroideON:
-                axes[1].plot(centroide_fila, centroide_columna, 'gx', markersize=2)
+            centroide_fila, centroide_columna = coordenadasCentroides[f"nucleo_{nucleo}"]
 
+            if centroideON:
+                axes[1].plot(centroide_columna, centroide_fila, 'gx', markersize=4)
 
             # Etiqueta cerca del centroide
             if rotulosON:
@@ -155,7 +169,6 @@ class RastreadorNucleos(BioImageHandler):
 
         axes[1].set_title("Nucleos detectados y delimitados")
         axes[1].axis('off')
-
+        
         plt.tight_layout()
         plt.show()
-        
