@@ -27,7 +27,7 @@ Para poder usar BioPictureTools, necesitas tener:
 
 Aquí los pasos para instalar/configurar el entorno en una PC con Linux (u otro sistema *nix).
 
-´´´
+```bash
 # Ver qué versión de Java está siendo usada o dónde está instalado:
 readlink -f $(which java)
 
@@ -47,17 +47,17 @@ source ~/.bashrc
 # o si usás zsh
 source ~/.zshrc
 
-´´´
+```
 
 Instala las dependencias 
 
-´´´
+```bash
 pip3 install -r requirements.txt
-´´´
+```
 
 ## Estructura del proyecto:
 
-´´´
+```bash
 BioPictureTools/
 ├── BioImageHandler/        # scripts relacionados con manejo de imágenes
 ├── RastreadorNucleos/      # scripts para detección/rastreo de núcleos
@@ -67,7 +67,7 @@ BioPictureTools/
 ├── LICENSE
 ├── README.md
 └── (otros scripts .py / notebooks / recursos)
-´´´
+```
 
 ## Licencia
 
